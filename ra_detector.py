@@ -8,32 +8,41 @@ _DISPLAY_NAME = 'ra_detector'
 
 def GetArgs():
   parser = argparse.ArgumentParser()
-  parser.add_argument('--frame_mod', dest='frame_mod', action='store', default=1, type=int)
-  parser.add_argument('--output_folder', dest='output_folder', default='', action='store')
+  parser.add_argument('--frame_mod', dest='frame_mod', action='store', default=1, type=int,
+    help='Process every [frame_mod] frames')
+  parser.add_argument('--output_folder', dest='output_folder', default='', action='store', 
+    help='If supplied, write output images to this folder')
   return parser.parse_args()
 
 
 def PreprocessImage(image):
+  """Preprocess the image by applying a blur"""
   image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
   image = image.astype(float)
   image = cv2.GaussianBlur(image, (7,7), 1)
   return image
   
 def ComputeSOD(frame1, frame2):
+  """Compute sum of difference between frames
+  Applies a filter on the difference image to reduce noise: 
+  https://opencv24-python-tutorials.readthedocs.io/en/latest/py_tutorials/py_imgproc/py_morphological_ops/py_morphological_ops.html
+  """
   if frame1 is None or frame2 is None:
     return 0
   else:
     diff = np.abs(frame2 - frame1)
-    #diff = cv2.morphologyEx(diff, cv2.MORPH_OPEN, np.ones((5,5)))
     diff = cv2.morphologyEx(diff, cv2.MORPH_OPEN, np.ones((11,11)))
     return np.abs(np.sum(diff.flatten())), diff
     
 def GetContours(image):
+  """Find contours(connected segments) in an image"""
   image = image.astype(np.uint8)
+  # Threshold the image about a certain value.
   ret, image = cv2.threshold(image, 15, 255, 0)
   return cv2.findContours(image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
 def GetDebugImage(contours, image):
+  """Draws bounding boxes around contours for debugging"""
   debug_image = np.copy(image)
   for contour in contours:
     x,y,w,h = cv2.boundingRect(contour)
@@ -72,6 +81,3 @@ def main():
 
 if __name__ == '__main__':
   main()
-  
-  
-
